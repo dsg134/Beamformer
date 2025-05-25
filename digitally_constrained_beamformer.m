@@ -4,9 +4,9 @@
 % -----------------------------------------------
 % Input Parameters
 f = 2.45e9;              % Frequency in Hz
-theta_desired = -30;  % Elevation angle in degrees
-phi_desired = 30;     % Azimuth angle in degrees
-element_spacing = 0.6; % Element spacing in wavelengths (default 0.5 for λ/2)
+theta_desired = 30;  % Elevation angle in degrees
+phi_desired = 40;     % Azimuth angle in degrees
+element_spacing = 0.55; % Element spacing in wavelengths (default 0.5 for λ/2)
 % -----------------------------------------------
 
 c = 3e8;  % Speed of light (m/s)
@@ -221,9 +221,9 @@ title(sprintf('Taylor: PSR=%.1f dB', psr_taylor));
 xlabel('Elevation θ (deg)');
 ylabel('Azimuth φ (deg)');
 
-% --- Phase Quantization Functions ---
+% --- Phase Constrained Functions ---
 function constrained_phase = quantize_phase(phase_deg)
-    available_phases = [1.4, 2.8, 5.6, 11.2, 22.5, 45, 90, 180, 360];
+    available_phases = [1.4, 2.8, 5.6, 11.2, 22.5, 45, 90, 180, 358.5];
     [~, idx] = min(abs(available_phases - mod(phase_deg, 360)));
     constrained_phase = available_phases(idx);
 end
