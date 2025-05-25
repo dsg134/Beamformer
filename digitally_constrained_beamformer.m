@@ -6,7 +6,7 @@
 f = 2.45e9;              % Frequency in Hz
 theta_desired = -30;  % Elevation angle in degrees
 phi_desired = 30;     % Azimuth angle in degrees
-element_spacing = 0.5; % Element spacing in wavelengths (default 0.5 for λ/2)
+element_spacing = 0.6; % Element spacing in wavelengths (default 0.5 for λ/2)
 % -----------------------------------------------
 
 c = 3e8;  % Speed of light (m/s)
@@ -342,7 +342,7 @@ xlabel('Elevation θ (deg)');
 ylabel('Azimuth φ (deg)');
 
 % --- Helper Functions ---
-function [psr, avg_sidelobe] = calculate_psr(af_db, theta_des, phi_des, theta, phi)
+function [psr, max_sidelobe] = calculate_psr(af_db, theta_des, phi_des, theta, phi)
     % Find main lobe peak
     [max_val, max_idx] = max(af_db(:));
     [row_idx, col_idx] = ind2sub(size(af_db), max_idx);
@@ -351,12 +351,13 @@ function [psr, avg_sidelobe] = calculate_psr(af_db, theta_des, phi_des, theta, p
     main_lobe_mask = (abs(theta - theta_des) < 10) & (abs(phi - phi_des) < 10);
     sidelobe_mask = ~main_lobe_mask;
     
-    % Calculate average sidelobe level
+    % Find maximum sidelobe level (excluding values at cutoff)
     sidelobes = af_db(sidelobe_mask);
-    avg_sidelobe = mean(sidelobes(sidelobes > -40)); % Exclude values at cutoff
+    sidelobes = sidelobes(sidelobes > -40); % Exclude values at cutoff
+    max_sidelobe = max(sidelobes);
     
-    % Peak-to-Sidelobe Ratio
-    psr = max_val - avg_sidelobe;
+    % Peak-to-Sidelobe Ratio (main lobe peak - largest sidelobe)
+    psr = max_val - max_sidelobe;
 end
 
 function display_weights(weights, N, M)
