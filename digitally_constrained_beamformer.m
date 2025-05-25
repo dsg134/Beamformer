@@ -222,49 +222,49 @@ xlabel('Elevation θ (deg)');
 ylabel('Azimuth φ (deg)');
 
 % --- Phase Quantization Functions ---
-function quantized_phase = quantize_phase(phase_deg)
+function constrained_phase = quantize_phase(phase_deg)
     available_phases = [1.4, 2.8, 5.6, 11.2, 22.5, 45, 90, 180, 360];
     [~, idx] = min(abs(available_phases - mod(phase_deg, 360)));
-    quantized_phase = available_phases(idx);
+    constrained_phase = available_phases(idx);
 end
 
-function quantized_weights = quantize_weights(weights)
-    quantized_weights = zeros(size(weights));
+function constrained_weights = constrained_weights(weights)
+    constrained_weights = zeros(size(weights));
     for n = 1:size(weights, 1)
         for m = 1:size(weights, 2)
             mag = abs(weights(n,m));
             phase_deg = angle(weights(n,m)) * 180/pi;
-            quantized_phase_deg = quantize_phase(phase_deg);
-            quantized_weights(n,m) = mag * exp(1j * deg2rad(quantized_phase_deg));
+            constrained_phase_deg = quantize_phase(phase_deg);
+            constrained_weights(n,m) = mag * exp(1j * deg2rad(constrained_phase_deg));
         end
     end
 end
 
-% Create quantized versions of the weights
-steer_quant = quantize_weights(steer);
-w_mvdr_quant = quantize_weights(w_mvdr);
-steer_taylor_quant = quantize_weights(steer_taylor);
+% Create constrained versions of the weights
+steer_quant = constrained_weights(steer);
+w_mvdr_quant = constrained_weights(w_mvdr);
+steer_taylor_quant = constrained_weights(steer_taylor);
 
-% Compute Array Factors for quantized beamformers
+% Compute Array Factors for constrained beamformers
 AF_conv_quant = zeros(size(THETA_rad));
 AF_mvdr_quant = zeros(size(THETA_rad));
 AF_taylor_quant = zeros(size(THETA_rad));
 
 for n = 0:N-1
     for m = 0:M-1
-        % Conventional quantized
+        % Conventional constrained
         AF_conv_quant = AF_conv_quant + steer_quant(n+1, m+1) * ...
             exp(1j * 2 * pi * d / lambda * ...
             (n * sin(THETA_rad) .* cos(PHI_rad) + ...
              m * sin(THETA_rad) .* sin(PHI_rad)));
         
-        % MVDR quantized
+        % MVDR constrained
         AF_mvdr_quant = AF_mvdr_quant + w_mvdr_quant(n+1, m+1) * ...
             exp(1j * 2 * pi * d / lambda * ...
             (n * sin(THETA_rad) .* cos(PHI_rad) + ...
              m * sin(THETA_rad) .* sin(PHI_rad)));
         
-        % Taylor quantized
+        % Taylor constrained
         AF_taylor_quant = AF_taylor_quant + steer_taylor_quant(n+1, m+1) * ...
             exp(1j * 2 * pi * d / lambda * ...
             (n * sin(THETA_rad) .* cos(PHI_rad) + ...
@@ -282,23 +282,23 @@ AF_mvdr_quant_db = 20 * log10(AF_mvdr_quant_mag / max(AF_mvdr_quant_mag(:)));
 AF_taylor_quant_mag = abs(AF_taylor_quant);
 AF_taylor_quant_db = 20 * log10(AF_taylor_quant_mag / max(AF_taylor_quant_mag(:)));
 
-% Calculate PSR for quantized patterns
+% Calculate PSR for constrained patterns
 [psr_conv_quant, avg_sidelobe_conv_quant] = calculate_psr(AF_conv_quant_db, theta_desired, phi_desired, theta, phi);
 [psr_mvdr_quant, avg_sidelobe_mvdr_quant] = calculate_psr(AF_mvdr_quant_db, theta_desired, phi_desired, theta, phi);
 [psr_taylor_quant, avg_sidelobe_taylor_quant] = calculate_psr(AF_taylor_quant_db, theta_desired, phi_desired, theta, phi);
 
-% Display quantized weights
-fprintf('\n=== Quantized Conventional Beamformer Weights ===\n');
+% Display constrained weights
+fprintf('\n=== Constrained Conventional Beamformer Weights ===\n');
 display_weights(steer_quant, N, M);
 
-fprintf('\n=== Quantized MVDR Beamformer Weights ===\n');
+fprintf('\n=== Constrained MVDR Beamformer Weights ===\n');
 display_weights(w_mvdr_quant, N, M);
 
-fprintf('\n=== Quantized Taylor Window Beamformer Weights ===\n');
+fprintf('\n=== Constrained Taylor Window Beamformer Weights ===\n');
 display_weights(steer_taylor_quant, N, M);
 
-% Display performance metrics for quantized patterns
-fprintf('\n=== Quantized Performance Metrics ===\n');
+% Display performance metrics for constrained patterns
+fprintf('\n=== Constrained Performance Metrics ===\n');
 fprintf('Conventional Beamformer:\n');
 fprintf('  Peak-to-Sidelobe Ratio: %.2f dB\n', psr_conv_quant);
 fprintf('  Average Sidelobe Level: %.2f dB\n', avg_sidelobe_conv_quant);
@@ -311,33 +311,33 @@ fprintf('\nTaylor Window Beamformer:\n');
 fprintf('  Peak-to-Sidelobe Ratio: %.2f dB\n', psr_taylor_quant);
 fprintf('  Average Sidelobe Level: %.2f dB\n', avg_sidelobe_taylor_quant);
 
-% Quantized Conventional Beamformer
+% Constrained Conventional Beamformer
 subplot(2, 3, 4);
 imagesc(theta, phi, AF_conv_quant_db);
 set(gca, 'YDir', 'normal');
 colorbar;
 caxis([-40 0]);
-title(sprintf('Quantized Conventional: PSR=%.1f dB', psr_conv_quant));
+title(sprintf('Constrained Conventional: PSR=%.1f dB', psr_conv_quant));
 xlabel('Elevation θ (deg)');
 ylabel('Azimuth φ (deg)');
 
-% Quantized MVDR Beamformer
+% Constrained MVDR Beamformer
 subplot(2, 3, 5);
 imagesc(theta, phi, AF_mvdr_quant_db);
 set(gca, 'YDir', 'normal');
 colorbar;
 caxis([-40 0]);
-title(sprintf('Quantized MVDR: PSR=%.1f dB', psr_mvdr_quant));
+title(sprintf('Constrained MVDR: PSR=%.1f dB', psr_mvdr_quant));
 xlabel('Elevation θ (deg)');
 ylabel('Azimuth φ (deg)');
 
-% Quantized Taylor Window Beamformer
+% Constrained Taylor Window Beamformer
 subplot(2, 3, 6);
 imagesc(theta, phi, AF_taylor_quant_db);
 set(gca, 'YDir', 'normal');
 colorbar;
 caxis([-40 0]);
-title(sprintf('Quantized Taylor: PSR=%.1f dB', psr_taylor_quant));
+title(sprintf('Constrained Taylor: PSR=%.1f dB', psr_taylor_quant));
 xlabel('Elevation θ (deg)');
 ylabel('Azimuth φ (deg)');
 
