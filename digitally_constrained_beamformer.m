@@ -4,9 +4,9 @@
 % -----------------------------------------------
 % Input Parameters
 f = 2.45e9;              % Frequency in Hz
-theta_desired = 30;  % Elevation angle in degrees
-phi_desired = 40;     % Azimuth angle in degrees
-element_spacing = 0.55; % Element spacing in wavelengths (default 0.5 for λ/2)
+theta_desired = 30;      % Elevation angle in degrees
+phi_desired = 40;        % Azimuth angle in degrees
+element_spacing = 0.55;  % Element spacing in wavelengths (default 0.5 for λ/2)
 % -----------------------------------------------
 
 c = 3e8;  % Speed of light (m/s)
@@ -159,10 +159,10 @@ end
 AF_taylor_mag = abs(AF_taylor);
 AF_taylor_db = 20 * log10(AF_taylor_mag / max(AF_taylor_mag(:)));
 
-% Calculate Peak-to-Sidelobe Ratios (PSR)
-[psr_conv, avg_sidelobe_conv] = calculate_psr(AF_conv_db, theta_desired, phi_desired, theta, phi);
-[psr_mvdr, avg_sidelobe_mvdr] = calculate_psr(AF_mvdr_db, theta_desired, phi_desired, theta, phi);
-[psr_taylor, avg_sidelobe_taylor] = calculate_psr(AF_taylor_db, theta_desired, phi_desired, theta, phi);
+% Calculate Peak-to-Sidelobe Ratios (PSR) - Updated to get both max and avg
+[psr_conv_max, psr_conv_avg, max_sidelobe_conv, avg_sidelobe_conv] = calculate_psr(AF_conv_db, theta_desired, phi_desired, theta, phi);
+[psr_mvdr_max, psr_mvdr_avg, max_sidelobe_mvdr, avg_sidelobe_mvdr] = calculate_psr(AF_mvdr_db, theta_desired, phi_desired, theta, phi);
+[psr_taylor_max, psr_taylor_avg, max_sidelobe_taylor, avg_sidelobe_taylor] = calculate_psr(AF_taylor_db, theta_desired, phi_desired, theta, phi);
 
 % Display element weights with phase wrapping (0 to 360 degrees)
 fprintf('\n=== Conventional Beamformer Weights ===\n');
@@ -174,22 +174,28 @@ display_weights(w_mvdr, N, M);
 fprintf('\n=== Taylor Window Beamformer Weights ===\n');
 display_weights(steer_taylor, N, M);
 
-% Display performance metrics
+% Display performance metrics - Updated to show both PSR values
 fprintf('\n=== Performance Metrics ===\n');
 fprintf('Conventional Beamformer:\n');
-fprintf('  Peak-to-Sidelobe Ratio: %.2f dB\n', psr_conv);
-fprintf('  Average Sidelobe Level: %.2f dB\n', avg_sidelobe_conv);
+fprintf('  Peak-to-MaxSidelobe Ratio: %.2f dB\n', psr_conv_max);
+fprintf('  Peak-to-AvgSidelobe Ratio: %.2f dB\n', psr_conv_avg);
+fprintf('  Max Sidelobe Level: %.2f dB\n', max_sidelobe_conv);
+fprintf('  Avg Sidelobe Level: %.2f dB\n', avg_sidelobe_conv);
 
 fprintf('\nMVDR Beamformer:\n');
-fprintf('  Peak-to-Sidelobe Ratio: %.2f dB\n', psr_mvdr);
-fprintf('  Average Sidelobe Level: %.2f dB\n', avg_sidelobe_mvdr);
+fprintf('  Peak-to-MaxSidelobe Ratio: %.2f dB\n', psr_mvdr_max);
+fprintf('  Peak-to-AvgSidelobe Ratio: %.2f dB\n', psr_mvdr_avg);
+fprintf('  Max Sidelobe Level: %.2f dB\n', max_sidelobe_mvdr);
+fprintf('  Avg Sidelobe Level: %.2f dB\n', avg_sidelobe_mvdr);
 
 fprintf('\nTaylor Window Beamformer:\n');
-fprintf('  Peak-to-Sidelobe Ratio: %.2f dB\n', psr_taylor);
-fprintf('  Average Sidelobe Level: %.2f dB\n', avg_sidelobe_taylor);
+fprintf('  Peak-to-MaxSidelobe Ratio: %.2f dB\n', psr_taylor_max);
+fprintf('  Peak-to-AvgSidelobe Ratio: %.2f dB\n', psr_taylor_avg);
+fprintf('  Max Sidelobe Level: %.2f dB\n', max_sidelobe_taylor);
+fprintf('  Avg Sidelobe Level: %.2f dB\n', avg_sidelobe_taylor);
 
 % Plot top three beampatterns
-figure('Position', [100, 100, 1500, 400]);
+figure('Position', [100, 100, 1500, 800]); % Increased height for better visibility
 
 % Conventional Beamformer
 subplot(2, 3, 1);
@@ -197,7 +203,7 @@ imagesc(theta, phi, AF_conv_db);
 set(gca, 'YDir', 'normal');
 colorbar;
 caxis([-40 0]);
-title(sprintf('Conventional: PSR=%.1f dB', psr_conv));
+title(sprintf('Conventional\nMaxPSR=%.1f dB, AvgPSR=%.1f dB', psr_conv_max, psr_conv_avg));
 xlabel('Elevation θ (deg)');
 ylabel('Azimuth φ (deg)');
 
@@ -207,7 +213,7 @@ imagesc(theta, phi, AF_mvdr_db);
 set(gca, 'YDir', 'normal');
 colorbar;
 caxis([-40 0]);
-title(sprintf('MVDR: PSR=%.1f dB', psr_mvdr));
+title(sprintf('MVDR\nMaxPSR=%.1f dB, AvgPSR=%.1f dB', psr_mvdr_max, psr_mvdr_avg));
 xlabel('Elevation θ (deg)');
 ylabel('Azimuth φ (deg)');
 
@@ -217,13 +223,13 @@ imagesc(theta, phi, AF_taylor_db);
 set(gca, 'YDir', 'normal');
 colorbar;
 caxis([-40 0]);
-title(sprintf('Taylor: PSR=%.1f dB', psr_taylor));
+title(sprintf('Taylor\nMaxPSR=%.1f dB, AvgPSR=%.1f dB', psr_taylor_max, psr_taylor_avg));
 xlabel('Elevation θ (deg)');
 ylabel('Azimuth φ (deg)');
 
 % --- Phase Constrained Functions ---
 function constrained_phase = quantize_phase(phase_deg)
-    available_phases = [1.4, 2.8, 5.6, 11.2, 22.5, 45, 90, 180, 358.5];
+    available_phases = 0:22.5:360;
     [~, idx] = min(abs(available_phases - mod(phase_deg, 360)));
     constrained_phase = available_phases(idx);
 end
@@ -282,10 +288,10 @@ AF_mvdr_quant_db = 20 * log10(AF_mvdr_quant_mag / max(AF_mvdr_quant_mag(:)));
 AF_taylor_quant_mag = abs(AF_taylor_quant);
 AF_taylor_quant_db = 20 * log10(AF_taylor_quant_mag / max(AF_taylor_quant_mag(:)));
 
-% Calculate PSR for constrained patterns
-[psr_conv_quant, avg_sidelobe_conv_quant] = calculate_psr(AF_conv_quant_db, theta_desired, phi_desired, theta, phi);
-[psr_mvdr_quant, avg_sidelobe_mvdr_quant] = calculate_psr(AF_mvdr_quant_db, theta_desired, phi_desired, theta, phi);
-[psr_taylor_quant, avg_sidelobe_taylor_quant] = calculate_psr(AF_taylor_quant_db, theta_desired, phi_desired, theta, phi);
+% Calculate PSR for constrained patterns - Updated to get both max and avg
+[psr_conv_quant_max, psr_conv_quant_avg, max_sidelobe_conv_quant, avg_sidelobe_conv_quant] = calculate_psr(AF_conv_quant_db, theta_desired, phi_desired, theta, phi);
+[psr_mvdr_quant_max, psr_mvdr_quant_avg, max_sidelobe_mvdr_quant, avg_sidelobe_mvdr_quant] = calculate_psr(AF_mvdr_quant_db, theta_desired, phi_desired, theta, phi);
+[psr_taylor_quant_max, psr_taylor_quant_avg, max_sidelobe_taylor_quant, avg_sidelobe_taylor_quant] = calculate_psr(AF_taylor_quant_db, theta_desired, phi_desired, theta, phi);
 
 % Display constrained weights
 fprintf('\n=== Constrained Conventional Beamformer Weights ===\n');
@@ -297,19 +303,25 @@ display_weights(w_mvdr_quant, N, M);
 fprintf('\n=== Constrained Taylor Window Beamformer Weights ===\n');
 display_weights(steer_taylor_quant, N, M);
 
-% Display performance metrics for constrained patterns
+% Display performance metrics for constrained patterns - Updated to show both PSR values
 fprintf('\n=== Constrained Performance Metrics ===\n');
 fprintf('Conventional Beamformer:\n');
-fprintf('  Peak-to-Sidelobe Ratio: %.2f dB\n', psr_conv_quant);
-fprintf('  Average Sidelobe Level: %.2f dB\n', avg_sidelobe_conv_quant);
+fprintf('  Peak-to-MaxSidelobe Ratio: %.2f dB\n', psr_conv_quant_max);
+fprintf('  Peak-to-AvgSidelobe Ratio: %.2f dB\n', psr_conv_quant_avg);
+fprintf('  Max Sidelobe Level: %.2f dB\n', max_sidelobe_conv_quant);
+fprintf('  Avg Sidelobe Level: %.2f dB\n', avg_sidelobe_conv_quant);
 
 fprintf('\nMVDR Beamformer:\n');
-fprintf('  Peak-to-Sidelobe Ratio: %.2f dB\n', psr_mvdr_quant);
-fprintf('  Average Sidelobe Level: %.2f dB\n', avg_sidelobe_mvdr_quant);
+fprintf('  Peak-to-MaxSidelobe Ratio: %.2f dB\n', psr_mvdr_quant_max);
+fprintf('  Peak-to-AvgSidelobe Ratio: %.2f dB\n', psr_mvdr_quant_avg);
+fprintf('  Max Sidelobe Level: %.2f dB\n', max_sidelobe_mvdr_quant);
+fprintf('  Avg Sidelobe Level: %.2f dB\n', avg_sidelobe_mvdr_quant);
 
 fprintf('\nTaylor Window Beamformer:\n');
-fprintf('  Peak-to-Sidelobe Ratio: %.2f dB\n', psr_taylor_quant);
-fprintf('  Average Sidelobe Level: %.2f dB\n', avg_sidelobe_taylor_quant);
+fprintf('  Peak-to-MaxSidelobe Ratio: %.2f dB\n', psr_taylor_quant_max);
+fprintf('  Peak-to-AvgSidelobe Ratio: %.2f dB\n', psr_taylor_quant_avg);
+fprintf('  Max Sidelobe Level: %.2f dB\n', max_sidelobe_taylor_quant);
+fprintf('  Avg Sidelobe Level: %.2f dB\n', avg_sidelobe_taylor_quant);
 
 % Constrained Conventional Beamformer
 subplot(2, 3, 4);
@@ -317,7 +329,7 @@ imagesc(theta, phi, AF_conv_quant_db);
 set(gca, 'YDir', 'normal');
 colorbar;
 caxis([-40 0]);
-title(sprintf('Constrained Conventional: PSR=%.1f dB', psr_conv_quant));
+title(sprintf('Constrained Conventional\nMaxPSR=%.1f dB, AvgPSR=%.1f dB', psr_conv_quant_max, psr_conv_quant_avg));
 xlabel('Elevation θ (deg)');
 ylabel('Azimuth φ (deg)');
 
@@ -327,7 +339,7 @@ imagesc(theta, phi, AF_mvdr_quant_db);
 set(gca, 'YDir', 'normal');
 colorbar;
 caxis([-40 0]);
-title(sprintf('Constrained MVDR: PSR=%.1f dB', psr_mvdr_quant));
+title(sprintf('Constrained MVDR\nMaxPSR=%.1f dB, AvgPSR=%.1f dB', psr_mvdr_quant_max, psr_mvdr_quant_avg));
 xlabel('Elevation θ (deg)');
 ylabel('Azimuth φ (deg)');
 
@@ -337,12 +349,12 @@ imagesc(theta, phi, AF_taylor_quant_db);
 set(gca, 'YDir', 'normal');
 colorbar;
 caxis([-40 0]);
-title(sprintf('Constrained Taylor: PSR=%.1f dB', psr_taylor_quant));
+title(sprintf('Constrained Taylor\nMaxPSR=%.1f dB, AvgPSR=%.1f dB', psr_taylor_quant_max, psr_taylor_quant_avg));
 xlabel('Elevation θ (deg)');
 ylabel('Azimuth φ (deg)');
 
-% --- Helper Functions ---
-function [psr, max_sidelobe] = calculate_psr(af_db, theta_des, phi_des, theta, phi)
+% --- Updated Helper Functions ---
+function [psr_max, psr_avg, max_sidelobe, avg_sidelobe] = calculate_psr(af_db, theta_des, phi_des, theta, phi)
     % Find main lobe peak
     [max_val, max_idx] = max(af_db(:));
     [row_idx, col_idx] = ind2sub(size(af_db), max_idx);
@@ -351,13 +363,15 @@ function [psr, max_sidelobe] = calculate_psr(af_db, theta_des, phi_des, theta, p
     main_lobe_mask = (abs(theta - theta_des) < 10) & (abs(phi - phi_des) < 10);
     sidelobe_mask = ~main_lobe_mask;
     
-    % Find maximum sidelobe level (excluding values at cutoff)
+    % Find all sidelobes (excluding values at cutoff)
     sidelobes = af_db(sidelobe_mask);
     sidelobes = sidelobes(sidelobes > -40); % Exclude values at cutoff
-    max_sidelobe = max(sidelobes);
     
-    % Peak-to-Sidelobe Ratio (main lobe peak - largest sidelobe)
-    psr = max_val - max_sidelobe;
+    % Calculate metrics
+    max_sidelobe = max(sidelobes);
+    avg_sidelobe = mean(sidelobes);
+    psr_max = max_val - max_sidelobe;  % PSR using max sidelobe
+    psr_avg = max_val - avg_sidelobe;  % PSR using avg sidelobe
 end
 
 function display_weights(weights, N, M)
